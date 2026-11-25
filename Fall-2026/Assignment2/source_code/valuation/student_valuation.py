@@ -121,27 +121,21 @@ def basis_stable(filings, closes) -> bool:
     return bool(np.all((jumps <= BASIS_JUMP) & (jumps >= 1 / BASIS_JUMP)))
 
 
-# Filing-date check (data audit, 11/24): for about 20 tickers (ASML, BIDU, CPAY, GEN, COHR, ...) the
-# database's accepted_date sits within a day of the quarter end, weeks before any real release, so
-# the course store shows those quarters early. Such a filing is treated as known FILING_DELAY_DAYS
-# after the quarter end (the 10-Q deadline is 40 days for large filers).
-FILING_DELAY_DAYS = 45
+# Filing-date check (data audit): for about 20 tickers (ASML, BIDU, CPAY, GEN, COHR, ...) the database's
+# accepted_date sits within a day of the quarter end, weeks before any real release, so the course store
+# shows those quarters early. Their true release dates are not in the data, and a fixed delay is not
+# safe (11/24 used quarter end + 45 days; the 11/25 review found BIDU 2019-Q4 released on 2020-02-27,
+# after that). Such filings are treated as missing.
 
 
-def known_filings(filings: pd.DataFrame, as_of) -> pd.DataFrame:
-    """Filings from data.fundamentals(), without those whose accepted date is implausibly early."""
+def known_filings(filings: pd.DataFrame, as_of=None) -> pd.DataFrame:
+    """Filings from data.fundamentals(), without those whose accepted date cannot be trusted."""
     if filings.empty:
         return filings
     period_end = pd.to_datetime(filings["datadate"], errors="coerce")
     known = pd.to_datetime(filings["accepted_date"], errors="coerce").fillna(
         pd.to_datetime(filings["filing_date"], errors="coerce"))
-    early = (known - period_end).dt.days.between(-1, 1)
-    visible = ~early | (period_end + pd.Timedelta(days=FILING_DELAY_DAYS) <= pd.Timestamp(as_of).normalize())
-    out = filings.loc[visible].copy()
-    shifted = early[visible]
-    out.loc[shifted, "accepted_date"] = (period_end[visible][shifted]
-                                         + pd.Timedelta(days=FILING_DELAY_DAYS)).dt.strftime("%Y-%m-%d")
-    return out
+    return filings.loc[~(known - period_end).dt.days.between(-1, 1)].copy()
 
 
 def contiguous_quarters(dates: pd.Series, n: int) -> bool:
@@ -558,8 +552,11 @@ def historical_ev_estimates(as_of, tickers, data) -> pd.DataFrame:
             row["missing_reason"] = "insufficient_ev_quarters"
         elif not np.isfinite(row["price"]) or row["price"] <= 0:
             row["missing_reason"] = "missing_price"
-        elif not basis_stable(f, history[ticker] if ticker in history else None):
-            row["missing_reason"] = "basis_mismatch"  # own-history multiples would straddle a basis change
+        elif not basis_ok(f.iloc[-1], row["price"]) or not basis_stable(
+                f, history[ticker] if ticker in history else None):
+            # a constant basis gap does not cancel once net debt is nonzero (11/25 review), and a change
+            # of basis inside the window would mix bases in the history
+            row["missing_reason"] = "basis_mismatch"
         else:
             events = _financial_events(f)
             row.update(events.iloc[-1].drop(labels="available_date").to_dict())

@@ -14,8 +14,8 @@
 | `student_valuation.py` | The module file |
 | `experiments/` | Scripts behind the robustness and calibration numbers in the report |
 | `check_submission.txt` | `check_submission.py --valuation` output |
-| `output/` | Evaluation CSVs, `ablation_*.csv`, `test_runs.jsonl`, `experiments/` tables |
-| `output/experiments/earlier_code/` | Results from code versions before the 11/23 method change and the 11/24 data fixes, cited in report section 7 and figures 3-4 |
+| `output/` | Evaluation CSVs, `ablation_*.csv`, `experiments/` tables |
+| `output/experiments/earlier_code/` | Results from earlier code versions (before the 11/23 method change, the 11/24 data fixes and the 11/25 review fixes), cited in report section 6 and figures 3-4; `pre_review_1125/` holds the outputs just before the review fixes |
 | `report.pdf` | Research report |
 
 ## Final configuration
@@ -92,6 +92,27 @@ python experiments/diagnostics_dev.py constants
 python experiments/diagnostics_dev.py flip
 python experiments/diagnostics_dev.py flipcheck
 python experiments/val_choice.py
+python experiments/engine_ablation.py --period dev
+python experiments/engine_ablation.py --period val
+python experiments/report_tables.py dev val
 ```
 
-Test-period runs: TODO (from `output/test_runs.jsonl`).
+`engine_ablation.py` is a supplementary A/B/C/D table with the course's engine timing (the required table uses `--timing full`). `report_tables.py` writes the SPY/QQQ benchmark rows and the rank IC with Newey-West t-statistics, both as the course evaluator computes it and with labels that end after the period dropped.
+
+## Bonus: retrained selection model
+
+`experiments/configs/growth_blend.json` is `selection/configs/growth.json` with one change: `bucket_alpha.growth_tech` 0.0 -> 0.5 (growth_tech ranks blended 50/50 with the all-stock model). No code changes. Both retrains ran in the same environment (scikit-learn 1.9.1, xgboost 3.4.1, lightgbm 4.7.0, numpy 2.5.5, pandas 3.1.1). Results: `output/experiments/bonus_selection.csv`.
+
+```bash
+python selection/build_scores.py --config selection/configs/growth.json --out output/retrained/unchanged/scores.parquet --workers 4
+python selection/build_scores.py --config experiments/configs/growth_blend.json --out output/retrained/blend/scores.parquet --workers 4
+cp output/retrained/unchanged/scores.parquet output/retrained/scores_unchanged.parquet
+cp output/retrained/blend/scores.parquet output/retrained/scores_blend.parquet
+python run_portfolio.py --period dev --scores output/retrained/scores_unchanged.parquet
+python run_portfolio.py --period dev --scores output/retrained/scores_unchanged.parquet --valuation
+python run_portfolio.py --period dev --scores output/retrained/scores_blend.parquet
+python run_portfolio.py --period dev --scores output/retrained/scores_blend.parquet --valuation
+```
+
+The same four backtests with `--period val`. The copies only give the two score files different names, so their output folders do not overwrite each other.
+
