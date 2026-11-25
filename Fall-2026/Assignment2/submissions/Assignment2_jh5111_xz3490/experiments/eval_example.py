@@ -28,6 +28,7 @@ def main():
     if keep:
         shutil.copy(ours, keep)
     try:
+        sys.argv = [sys.argv[0]] + args + ["--example"]
         evaluate_valuation.main(args + ["--example"])
         shutil.move(ours, Path("output") / f"valuation_eval_example_{period}.csv")
     finally:
