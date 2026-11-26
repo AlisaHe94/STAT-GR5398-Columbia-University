@@ -7,7 +7,8 @@ from pathlib import Path
 
 import pandas as pd
 
-RUNS = {"dev": ("dev_A_selection", "dev_B_valuation"), "val": ("val_A_selection", "val_B_valuation")}
+RUNS = {"dev": ("dev_A_selection", "dev_B_valuation"), "val": ("val_A_selection", "val_B_valuation"),
+        "test": ("test_A_selection", "test_B_valuation")}
 
 
 def yearly(eq):

@@ -15,12 +15,12 @@
 | `experiments/` | Scripts behind the robustness and calibration numbers in the report |
 | `check_submission.txt` | `check_submission.py --valuation` output |
 | `output/` | Evaluation CSVs, `ablation_*.csv`, `experiments/` tables |
-| `output/experiments/earlier_code/` | Results from earlier code versions (before the 11/23 method change, the 11/24 data fixes and the 11/25 review fixes), cited in report section 6 and figures 3-4; `pre_review_1125/` holds the outputs just before the review fixes |
+| `output/experiments/earlier_code/` | Results from earlier code versions (before the 11/23 method change, the 11/24 data fixes and the 11/25 review fixes), cited in report section 4.2; `pre_review_1125/` holds the outputs just before the review fixes |
 | `report.pdf` | Research report |
 
 ## Final configuration
 
-Git commit: `TODO`
+Git commit: `32a02b5a004dfc50a968538c0a28b426cfa48337`
 
 Medium blog: TODO link
 
@@ -94,7 +94,7 @@ python experiments/diagnostics_dev.py flipcheck
 python experiments/val_choice.py
 python experiments/engine_ablation.py --period dev
 python experiments/engine_ablation.py --period val
-python experiments/report_tables.py dev val
+python experiments/report_tables.py dev val test
 ```
 
 `engine_ablation.py` is a supplementary A/B/C/D table with the course's engine timing (the required table uses `--timing full`). `report_tables.py` writes the SPY/QQQ benchmark rows and the rank IC with Newey-West t-statistics, both as the course evaluator computes it and with labels that end after the period dropped.
